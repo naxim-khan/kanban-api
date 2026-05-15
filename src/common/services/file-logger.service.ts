@@ -1,58 +1,51 @@
 import { Injectable, LoggerService } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
 
+/**
+ * Structured request logging to stdout (Vercel/runtime logs).
+ * No filesystem writes — serverless deploys cannot create dirs under /var/task.
+ */
 @Injectable()
 export class FileLoggerService implements LoggerService {
-  private readonly logDir = path.join(process.cwd(), 'logs');
-  private readonly logFile = path.join(this.logDir, 'app.log');
-
-  constructor() {
-    this.ensureLogDirExists();
+  log(message: unknown, context?: string) {
+    this.write('LOG', message, context);
   }
 
-  private ensureLogDirExists() {
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true });
-    }
+  error(message: unknown, trace?: string, context?: string) {
+    this.write('ERROR', message, context, trace);
   }
 
-  log(message: any, context?: string) {
-    this.writeToFile('LOG', message, context);
+  warn(message: unknown, context?: string) {
+    this.write('WARN', message, context);
   }
 
-  error(message: any, trace?: string, context?: string) {
-    this.writeToFile('ERROR', message, context, trace);
+  debug(_message: unknown, _context?: string) {
+    // Intentionally quiet; HTTP middleware uses Nest Logger for debug.
   }
 
-  warn(message: any, context?: string) {
-    this.writeToFile('WARN', message, context);
+  verbose(_message: unknown, _context?: string) {
+    // Intentionally quiet.
   }
 
-  debug(message: any, context?: string) {
-    // Only logged to console if needed, not file by default to avoid noise
-  }
-
-  verbose(message: any, context?: string) {
-    // Only logged to console if needed
-  }
-
-  private async writeToFile(
+  private write(
     level: string,
-    message: any,
+    message: unknown,
     context?: string,
     trace?: string,
   ) {
     const timestamp = new Date().toISOString();
     const contextStr = context ? ` [${context}]` : '';
     const traceStr = trace ? `\n${trace}` : '';
-    const formattedMessage = `[${timestamp}] ${level}${contextStr}: ${message}${traceStr}\n`;
+    const line = `[${timestamp}] ${level}${contextStr}: ${String(message)}${traceStr}`;
 
-    try {
-      await fs.promises.appendFile(this.logFile, formattedMessage, 'utf8');
-    } catch (error) {
-      // Fallback to console if file logging fails to avoid losing critical logs
-      console.error('Failed to write to log file:', error);
+    switch (level) {
+      case 'ERROR':
+        console.error(line);
+        break;
+      case 'WARN':
+        console.warn(line);
+        break;
+      default:
+        console.log(line);
     }
   }
 }
