@@ -11,6 +11,7 @@ import { getQueueToken } from '@nestjs/bull';
 import compression from 'compression';
 import helmet from 'helmet';
 
+import { isRedisCacheConfigured } from './config/cache.config';
 import { AppModule } from './app.module';
 import { HttpErrorFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -55,8 +56,10 @@ export async function createConfiguredApp(): Promise<INestApplication> {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const mailQueue = app.get(getQueueToken('mail'));
-  BullDashboardModule.setupDashboard(app, [mailQueue]);
+  if (isRedisCacheConfigured()) {
+    const mailQueue = app.get(getQueueToken('mail'));
+    BullDashboardModule.setupDashboard(app, [mailQueue]);
+  }
 
   return app;
 }

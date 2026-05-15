@@ -5,7 +5,7 @@ import { createCache } from 'cache-manager';
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-import { isRedisCacheConfigured } from '../config/cache.config';
+import { isRedisCacheConfigured } from '../config/redis-options';
 
 function createMemoryCache() {
   const keyv = new Keyv({ namespace: 'cache' });

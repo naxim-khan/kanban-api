@@ -16,8 +16,10 @@ export class MailProcessor {
       await this.mailService.sendWelcomeEmail(job.data.to, job.data.name);
       this.logger.log(`Completed 'welcome' job for ${job.data.to}`);
     } catch (error) {
-      this.logger.error(`Error processing 'welcome' job: ${error.message}`);
-      throw error; // Let Bull handle retries
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Welcome job failed for ${job.data.to} (not rethrowing): ${message}`,
+      );
     }
   }
 }

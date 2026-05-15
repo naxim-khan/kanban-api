@@ -2,16 +2,26 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
+import { isMailConfigured } from '../../config/mail.config';
+
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
   private readonly logger = new Logger(MailService.name);
+  private readonly transporter: nodemailer.Transporter | null;
 
-  constructor(private configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
+    if (!isMailConfigured()) {
+      this.transporter = null;
+      this.logger.log(
+        '[MAIL] SMTP not configured (MAIL_USER / MAIL_PASS); emails disabled.',
+      );
+      return;
+    }
+
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('mail.host'),
       port: this.configService.get<number>('mail.port'),
-      secure: false, // true for 465, false for other ports
+      secure: false,
       auth: {
         user: this.configService.get<string>('mail.user'),
         pass: this.configService.get<string>('mail.pass'),
@@ -19,7 +29,11 @@ export class MailService {
     });
   }
 
-  async sendWelcomeEmail(to: string, name: string) {
+  async sendWelcomeEmail(to: string, name: string): Promise<void> {
+    if (!this.transporter) {
+      return;
+    }
+
     try {
       const from = this.configService.get<string>('mail.from');
       await this.transporter.sendMail({
@@ -34,10 +48,8 @@ export class MailService {
       });
       this.logger.log(`Email sent successfully to ${to}`);
     } catch (error) {
-      this.logger.error(`Failed to send email to ${to}: ${error.message}`);
-      throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to send email to ${to}: ${message}`);
     }
   }
-
-  // Add more email methods as needed
 }

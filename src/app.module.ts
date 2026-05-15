@@ -3,13 +3,16 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { GlobalCacheModule } from './common/global-cache.module';
-import { MailModule } from './queues/email/mail.module';
 import { BullDashboardModule } from './queues/dashboard/bull-dashboard.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from './common/throttler-storage-redis.service';
 import { SentryModule } from '@sentry/nestjs/setup';
 
 import configuration from './config';
+import {
+  getRedisConnectionOptions,
+  isRedisCacheConfigured,
+} from './config/redis-options';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -18,12 +21,29 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CommonModule } from './common/common.module';
 import { TasksModule } from './tasks/tasks.module';
 import { HealthModule } from './health/health.module';
+import { MailModule } from './queues/email/mail.module';
 
-// Middleware
 import { UserContextMiddleware } from './common/middleware/user-context.middleware';
 import { AuthRequestContextMiddleware } from './common/middleware/auth-request-context.middleware';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AdminAuthMiddleware } from './common/middleware/admin-auth.middleware';
+
+const redisImports = isRedisCacheConfigured()
+  ? [
+      BullModule.forRootAsync({
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => {
+          const logger = new Logger('BullModule');
+          const redis = getRedisConnectionOptions(config);
+          logger.log(
+            `[Bull] Redis queue enabled (${typeof redis === 'string' ? 'REDIS_URL' : `${redis.host}:${redis.port}`})`,
+          );
+          return { redis };
+        },
+      }),
+      BullDashboardModule,
+    ]
+  : [];
 
 @Module({
   imports: [
@@ -32,40 +52,23 @@ import { AdminAuthMiddleware } from './common/middleware/admin-auth.middleware';
       load: configuration,
     }),
     SentryModule.forRoot(),
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const logger = new Logger('BullModule');
-        const redisOptions = {
-          host: config.get('cache.host'),
-          port: config.get('cache.port'),
-        };
-        logger.log(
-          `📡 [Bull] Connecting to Redis at ${redisOptions.host}:${redisOptions.port}`,
-        );
-        return {
-          redis: {
-            ...redisOptions,
-            lazyConnect: true,
-            maxRetriesPerRequest: null,
-          },
-        };
-      },
-    }),
+    ...redisImports,
     GlobalCacheModule,
-    MailModule,
-    BullDashboardModule,
+    MailModule.register(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        throttlers: [{ ttl: 60000, limit: 100 }], // 100 requests per minute by default
-        storage: new ThrottlerStorageRedisService({
-          host: config.get('cache.host'),
-          port: config.get('cache.port'),
-          lazyConnect: true,
-          maxRetriesPerRequest: null,
-        }),
-      }),
+      useFactory: (config: ConfigService) => {
+        const throttlers = [{ ttl: 60000, limit: 100 }];
+        if (!isRedisCacheConfigured()) {
+          return { throttlers };
+        }
+        return {
+          throttlers,
+          storage: new ThrottlerStorageRedisService(
+            getRedisConnectionOptions(config),
+          ),
+        };
+      },
     }),
     UsersModule,
     AuthModule,

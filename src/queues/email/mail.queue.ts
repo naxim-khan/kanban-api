@@ -44,10 +44,10 @@ export class MailQueue {
       this.logger.log(`Job added successfully with ID: ${job.id}`);
       return job;
     } catch (error) {
-      this.logger.error(
-        `Failed to add welcome email job to queue: ${error.message}`,
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Failed to add welcome email job to queue (app continues): ${message}`,
       );
-      throw error;
     }
   }
 }

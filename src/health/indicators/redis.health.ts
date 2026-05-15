@@ -3,6 +3,8 @@ import { HealthIndicator, HealthIndicatorResult } from '@nestjs/terminus';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 
+import { isRedisCacheConfigured } from '../../config/cache.config';
+
 @Injectable()
 export class RedisHealthIndicator extends HealthIndicator {
   constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
@@ -10,12 +12,17 @@ export class RedisHealthIndicator extends HealthIndicator {
   }
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
+    if (!isRedisCacheConfigured()) {
+      return this.getStatus(key, true, {
+        message: 'Redis not configured; using in-memory cache',
+      });
+    }
+
     try {
-      // Test Redis connectivity by setting and getting a test value
       const testKey = '__health_check__';
       const testValue = Date.now().toString();
 
-      await this.cacheManager.set(testKey, testValue, 1000); // 1 second TTL
+      await this.cacheManager.set(testKey, testValue, 1000);
       const retrieved = await this.cacheManager.get(testKey);
 
       if (retrieved === testValue) {
