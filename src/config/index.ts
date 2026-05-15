@@ -5,6 +5,7 @@ import jwtConfig from './jwt.config';
 import cacheConfig from './cache.config';
 import mailConfig from './mail.config';
 import sentryConfig from './sentry.config';
+import corsConfig from './cors.config';
 
 export const appConfig = registerAs('app', () => ({
   port: parseInt(process.env.PORT ?? '3000', 10),
@@ -18,4 +19,5 @@ export default [
   cacheConfig,
   mailConfig,
   sentryConfig,
+  corsConfig,
 ];

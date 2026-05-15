@@ -9,6 +9,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { getQueueToken } from '@nestjs/bull';
 import compression from 'compression';
+import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import helmet from 'helmet';
 
 import { isRedisCacheConfigured } from './config/cache.config';
@@ -32,12 +33,30 @@ export async function createConfiguredApp(): Promise<INestApplication> {
 
   app.use(helmet());
 
-  const allowedOrigins =
-    configService.get<string>('CORS_ORIGINS')?.split(',') || '*';
+  const corsOrigins = configService.get<string[]>('cors.origins') ?? [];
+  const corsCredentials =
+    configService.get<boolean>('cors.credentials') ?? false;
+  const corsMethods = configService.get<string[]>('cors.methods') ?? [
+    'GET',
+    'HEAD',
+    'PUT',
+    'PATCH',
+    'POST',
+    'DELETE',
+    'OPTIONS',
+  ];
+
+  const corsOrigin: CorsOptions['origin'] =
+    corsOrigins.length > 0
+      ? corsOrigins
+      : (origin, callback) => {
+          callback(null, origin ?? true);
+        };
+
   app.enableCors({
-    origin: allowedOrigins,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+    origin: corsOrigin,
+    methods: corsMethods,
+    credentials: corsCredentials,
   });
   app.use(compression());
 
