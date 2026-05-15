@@ -1,14 +1,15 @@
 import 'dotenv/config';
 import { PrismaClient, Role } from './generated/client';
-import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
+
+import { createPrismaPgAdapter } from '../src/prisma/pg-adapter.util';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   throw new Error('DATABASE_URL is required for seeding');
 }
 
-const prisma = new PrismaClient({ adapter: new PrismaPg(databaseUrl) });
+const prisma = new PrismaClient({ adapter: createPrismaPgAdapter(databaseUrl) });
 
 async function main() {
   const adminEmail = process.env.ADMIN_EMAIL || 'nazeemkhanpk@gmail.com';
