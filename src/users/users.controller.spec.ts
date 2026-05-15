@@ -1,10 +1,44 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UsersAssignableController } from './users-assignable.controller';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { Role } from '@generated/prisma';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { OwnershipGuard } from 'src/auth/guards/ownership.guard';
+
+describe('UsersAssignableController', () => {
+  let assignableController: UsersAssignableController;
+
+  const mockUsersService = {
+    findAssignable: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [UsersAssignableController],
+      providers: [
+        { provide: UsersService, useValue: mockUsersService },
+      ],
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+
+    assignableController = module.get(UsersAssignableController);
+    jest.clearAllMocks();
+  });
+
+  it('should return assignable users', async () => {
+    const users = [{ id: '1', name: 'test', email: 'test@gmail.com' }];
+    mockUsersService.findAssignable.mockResolvedValue(users);
+
+    const result = await assignableController.findAssignable();
+
+    expect(result).toEqual(users);
+    expect(mockUsersService.findAssignable).toHaveBeenCalled();
+  });
+});
 
 describe('UsersController', () => {
   let controller: UsersController;

@@ -4,6 +4,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersService } from './users.service';
 
+import { UsersAssignableController } from './users-assignable.controller';
 import { UsersController } from './users.controller';
 
 @Module({
@@ -11,7 +12,7 @@ import { UsersController } from './users.controller';
 
   providers: [UsersService],
 
-  controllers: [UsersController],
+  controllers: [UsersAssignableController, UsersController],
   exports: [UsersService],
 })
 export class UsersModule {}

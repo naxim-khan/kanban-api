@@ -34,6 +34,7 @@ export class UsersService {
       const hashed = await hashPassword(createUserDto.password);
       // invalidate cached users list
       await this.cacheManager.del('users');
+      await this.cacheManager.del('users:assignable');
       const user = await this.prisma.user.create({
         data: {
           ...createUserDto,
@@ -72,6 +73,7 @@ export class UsersService {
 
       // invalidate cached users list
       await this.cacheManager.del('users');
+      await this.cacheManager.del('users:assignable');
       return sanitizeUser(user);
     } catch (error) {
       if (error.code === 'P2002') {
@@ -107,6 +109,31 @@ export class UsersService {
     return sanitized;
   }
 
+  /** Id, name, email only — for task assignee/creator pickers (any authenticated user). */
+  async findAssignable() {
+    const cacheKey = 'users:assignable';
+
+    try {
+      const cached = await this.cacheManager.get<
+        { id: string; name: string; email: string }[]
+      >(cacheKey);
+      if (cached) {
+        this.logger.log('Assignable users served from cache.');
+        return cached;
+      }
+    } catch (err) {
+      this.logger.error('Cache GET error (assignable):', err);
+    }
+
+    const users = await this.prisma.user.findMany({
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    });
+
+    await this.cacheManager.set(cacheKey, users, 300000);
+    return users;
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
@@ -138,6 +165,7 @@ export class UsersService {
     });
     // invalidate cached users list
     await this.cacheManager.del('users');
+    await this.cacheManager.del('users:assignable');
     return sanitizeUser(updatedUser);
   }
 
@@ -170,6 +198,7 @@ export class UsersService {
     });
     // invalidate cached users list
     await this.cacheManager.del('users');
+    await this.cacheManager.del('users:assignable');
     return sanitizeUser(updatedUser);
   }
 
@@ -180,6 +209,7 @@ export class UsersService {
       });
       // invalidate cached users list
       await this.cacheManager.del('users');
+      await this.cacheManager.del('users:assignable');
 
       return sanitizeUser(user);
     } catch (error) {

@@ -112,10 +112,11 @@ Global prefix: **`/api`**. Responses are wrapped by a global interceptor where a
 - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`
 - JWT: `Authorization: Bearer <access_token>`
 
-### Users (admin)
+### Users
 
-- `GET /api/users`, `GET /api/users/:id`, `PATCH /api/users/:id`, `DELETE /api/users/:id`  
-- Admin-only routes are enforced in guards / services — verify with a non-admin token in Swagger.
+- `GET /api/assignable-users` — id, name, email for task assignee/creator pickers (any authenticated user).
+- `GET /api/users`, `POST /api/users` — admin only (`RolesGuard`).
+- `GET /api/users/:id`, `PUT /api/users/:id`, `DELETE /api/users/:id` — own profile or admin (`OwnershipGuard`).
 
 ### Tasks (Kanban)
 

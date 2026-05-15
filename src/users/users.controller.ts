@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   UseGuards,
@@ -62,7 +63,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @Get(':id')
   @UseGuards(AuthGuard, OwnershipGuard)
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
@@ -73,7 +74,7 @@ export class UsersController {
   @Put(':id')
   @UseGuards(AuthGuard, OwnershipGuard)
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto | AdminUpdateUserDto,
     @User() user: RequestTypes.JwtPayload,
   ) {
@@ -91,7 +92,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @Delete(':id')
   @UseGuards(AuthGuard, OwnershipGuard)
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.remove(id);
   }
 }
