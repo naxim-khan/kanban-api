@@ -1,0 +1,27 @@
+# Local PostgreSQL for Prisma — matches DATABASE_URL:
+# postgresql://admin:admin@localhost:5432/admin?schema=public
+#
+# Start: docker compose -f docker-compose.postgres.yml up -d
+# Stop:  docker compose -f docker-compose.postgres.yml down
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pm-kanban-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: admin
+    volumes:
+      - pm_kanban_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d admin"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pm_kanban_pg_data:

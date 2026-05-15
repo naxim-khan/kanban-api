@@ -1,0 +1,17 @@
+node_modules
+dist
+npm-debug.log
+.env
+.git
+.gitignore
+README.md
+Dockerfile
+docker-compose.yml
+.npmrc
+.vscode
+.prettierrc
+eslint.config.mjs
+nest-cli.json
+prisma/migrations
+test
+coverage
